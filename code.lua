@@ -61,6 +61,7 @@ function Update(timeDelta)
 
     -- Apply player jump velocity when they press A and are grounded
     if Button(Buttons.A, InputState.Down) and player.onGround then
+        PlaySound(6, 6)
         player.velocity.y = -player.jumpPower
     end
 
@@ -96,25 +97,25 @@ function Update(timeDelta)
         player.position.x = startx
         player.velocity.x = 0
     end
-    
+
     -- Move the player
     player.position.x = player.position.x + player.velocity.x
-    
+
     local xoffset = 0
     if player.velocity.x > 0 then
         xoffset = 7
     end
-    
+
     local flag = Flag((player.position.x + xoffset) / 8, (player.position.y + 7) / 8)
-    
+
     if flag == 0 then
         player.position.x = startx
     end
-    
+
     player.velocity.y = player.velocity.y + gameRules.gravity
     player.position.y = player.position.y + player.velocity.y
     player.onGround = false
-    
+
     if player.velocity.y >= 0 then
         local flag = Flag((player.position.x + 4) / 8, (player.position.y + 8) / 8)
         if flag == flags.solid then
@@ -123,7 +124,7 @@ function Update(timeDelta)
             player.onGround = true
         end
     end
-    
+
     if player.velocity.y <= 0 then
         local flag = Flag((player.position.x + 4) / 8,(player.position.y ) / 8)
         if flag == flags.solid then
@@ -131,7 +132,7 @@ function Update(timeDelta)
             player.velocity.y = 0
         end
     end
-    
+
     -- Plant pot collision y
     if math.abs(player.position.y - plantPot.position.y) < 4 and math.abs(player.position.x - plantPot.position.x) < 8 and not plantPot.pickedUp then
         player.position.y = plantPot.position.y - 4
@@ -142,6 +143,7 @@ function Update(timeDelta)
     -- Pick up pot
     if Button(Buttons.B, InputState.Down) and math.abs(player.position.x + player.velocity.x - plantPot.position.x) < 10 and not bHeldDown then
         -- Put down pot
+        PlaySound(7, 5)
         if plantPot.pickedUp then
             plantPot.position.y = player.position.y
         end
