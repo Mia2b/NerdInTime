@@ -43,6 +43,7 @@ local isFuture = false
 
 function Init()
     BackgroundColor(0)
+    PlaySong(0, true)
     local display = Display()
 end
 
@@ -139,17 +140,17 @@ function Update(timeDelta)
     end
 
     -- Pick up pot
-    if Button(Buttons.Up, InputState.Down) and math.abs(player.position.x + player.velocity.x - plantPot.position.x) < 10 and not upHeldDown then
+    if Button(Buttons.B, InputState.Down) and math.abs(player.position.x + player.velocity.x - plantPot.position.x) < 10 and not bHeldDown then
         -- Put down pot
         if plantPot.pickedUp then
             plantPot.position.y = player.position.y
         end
         plantPot.pickedUp = not plantPot.pickedUp
-        upHeldDown = true
+        bHeldDown = true
     end
 
-    if Button(Buttons.Up, InputState.Released) then
-        upHeldDown = false
+    if Button(Buttons.B, InputState.Released) then
+        bHeldDown = false
     end
 
     -- Update Plant pot position
@@ -160,15 +161,15 @@ function Update(timeDelta)
     end
 
     -- Change time
-    if Button(Buttons.B, InputState.Down) and not bHeldDown then
+    if Button(Buttons.Up, InputState.Down) and not upHeldDown then
         isFuture = not isFuture
         local bgColor = (isFuture and 1 or 0)
         BackgroundColor( bgColor )
-        bHeldDown = true
+        upHeldDown = true
     end
 
-    if Button(Buttons.B, InputState.Released) then
-        bHeldDown = false
+    if Button(Buttons.Up, InputState.Released) then
+        upHeldDown = false
     end
 
 end
