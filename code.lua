@@ -1,72 +1,101 @@
---[[
-    Pixel Vision 8 - New Template Script
-    Copyright (C) 2017, Pixel Vision 8 (@pixelvision8)
-    Created by Jesse Freeman (@jessefreeman)
+local gameRules = {
+    gravity = 0.2,
+}
 
-    This project was designed to display some basic instructions when you create
-    a new game.  Simply delete the following code and implement your own Init(),
-    Update() and Draw() logic.
+local player = {
+    position = {
+        x = 64.0,
+        y = 64.0,
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        max = 2,
+    },
+    onGround = false,
+    jumpPower = 3.0,
+    acceleration = 0.8,
+    decceleration = 0.5,
+}
 
-    Learn more about making Pixel Vision 8 games at
-    https://www.pixelvision8.com/getting-started
-]]--
+local flags = {
+    solid = 0,
+}
 
---[[
-    This this is an empty game, we will the following text. We combined two sets
-    of fonts into the default.font.png. Use uppercase for larger characters and
-    lowercase for a smaller one.
-]]--
-local message = "EMPTY GAME\n\n\nThis is an empty game template.\n\n\nVisit 'www.pixelvision8.com' to learn more about creating games from scratch."
+-- Based on https://www.lexaloffle.com/bbs/?tid=27626
 
---[[
-    The Init() method is part of the game's lifecycle and called a game starts.
-    We are going to use this method to configure background color,
-    ScreenBufferChip and draw a text box.
-]]--
 function Init()
-
-    -- Here we are manually changing the background color
     BackgroundColor(0)
-
     local display = Display()
+end
 
-    -- We are going to render the message in a box as tiles. To do this, we
-    -- need to wrap the text, then split it into lines and draw each line.
-    local wrap = WordWrap(message, (display.x / 8) - 2)
-    local lines = SplitLines(wrap)
-    local total = #lines
-    local startY = ((display.y / 8) - 1) - total
+function Update(timeDelta)
+    local startx = player.position.x
 
-    -- We want to render the text from the bottom of the screen so we offset
-    -- it and loop backwards.
-    for i = total, 1, -1 do
-        DrawText(lines[i], 1, startY + (i - 1), DrawMode.Tile, "large", 15)
+    -- Apply player jump velocity when they press up and are grounded
+    if (Button(Buttons.A, InputState.Down) or Button(Buttons.B, InputState.Down) or Button(Buttons.Up, InputState.Down) and player.onGround) then
+        player.velocity.y = -player.jumpPower
     end
 
+    -- Apply velocity to the player based on movement keys
+    if Button(Buttons.Left, InputState.Down) and not Button(Buttons.Right, InputState.Down) then
+        player.velocity.x = player.velocity.x - player.acceleration
+    elseif not Button(Buttons.Left, InputState.Down) and Button(Buttons.Right, InputState.Down) then
+        player.velocity.x = player.velocity.x + player.acceleration
+    else
+        if player.velocity.x > player.decceleration then
+            player.velocity.x = player.velocity.x - player.decceleration
+        elseif player.velocity.x < -player.decceleration then
+            player.velocity.x = player.velocity.x + player.decceleration
+        else
+            player.velocity.x = 0
+        end
+    end
+
+    -- Cap the player velocity
+    if player.velocity.x > player.velocity.max then
+        player.velocity.x = player.velocity.max
+    elseif player.velocity.x < -player.velocity.max then
+        player.velocity.x = -player.velocity.max
+    end
+
+    -- Move the player
+    player.position.x = player.position.x + player.velocity.x
+
+    local xoffset = 0
+    if player.velocity.x>0 then
+        xoffset=7
+    end
+
+    local flag = Flag((player.position.x + xoffset) / 8, (player.position.y + 7) / 8)
+
+    if flag == 0 then
+        player.position.x = startx
+    end
+
+    player.velocity.y = player.velocity.y + gameRules.gravity
+    player.position.y = player.position.y +player.velocity.y
+    player.onGround = false
+
+    if player.velocity.y >= 0 then
+        local flag = Flag((player.position.x + 4) / 8, (player.position.y + 8) / 8)
+        if flag == flags.solid then
+            player.position.y = math.floor(player.position.y / 8) * 8
+            player.velocity.y = 0
+            player.onGround=true
+        end
+    end
+
+    if player.velocity.y <= 0 then
+        local flag = Flag((player.position.x + 4) / 8,(player.position.y ) / 8)
+        if flag == 0 then
+            player.position.y = math.floor((player.position.y + 8) / 8) * 8
+            player.velocity.y = 0
+        end
+    end
 end
 
---[[
-    The Update() method is part of the game's life cycle. The engine calls
-    Update() on every frame before the Draw() method. It accepts one argument,
-    timeDelta, which is the difference in milliseconds since the last frame.
-]]--
-function Update(timeDelta)
-
-    -- TODO add your own update logic here
-
-end
-
---[[
-    The Draw() method is part of the game's life cycle. It is called after
-    Update() and is where all of our draw calls should go. We'll be using this
-    to render sprites to the display.
-]]--
 function Draw()
-
-    -- We can use the RedrawDisplay() method to clear the screen and redraw
-    -- the tilemap in a single call.
     RedrawDisplay()
-
-    -- TODO add your own draw logic here.
-
+    DrawSprite ( 1, player.position.x, player.position.y , false, false, DrawMode.Sprite, 0)
 end
