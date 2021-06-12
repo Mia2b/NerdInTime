@@ -1,5 +1,7 @@
 local gameRules = {
     gravity = 0.2,
+    acceleration = 0.5,
+    decceleration = 0.5,
 }
 
 local player = {
@@ -12,10 +14,12 @@ local player = {
         y = 0.0,
         max = 2,
     },
+    isLeft = false,
     onGround = false,
     jumpPower = 3.0,
-    acceleration = 0.8,
+    acceleration = 0.5,
     decceleration = 0.5,
+    sprite = 1
 }
 
 local flags = {
@@ -32,8 +36,16 @@ end
 function Update(timeDelta)
     local startx = player.position.x
 
+    if not player.onGround then
+        player.acceleration = gameRules.acceleration / 2
+        player.decceleration = gameRules.decceleration / 2
+    else
+        player.acceleration = gameRules.acceleration
+        player.decceleration = gameRules.decceleration
+    end
+
     -- Apply player jump velocity when they press up and are grounded
-    if (Button(Buttons.A, InputState.Down) or Button(Buttons.B, InputState.Down) or Button(Buttons.Up, InputState.Down) and player.onGround) then
+    if (Button(Buttons.A, InputState.Down) or Button(Buttons.B, InputState.Down) or Button(Buttons.Up, InputState.Down)) and player.onGround then
         player.velocity.y = -player.jumpPower
     end
 
@@ -52,6 +64,11 @@ function Update(timeDelta)
         end
     end
 
+    if player.velocity.x > 0 then
+        player.isLeft = false
+    elseif player.velocity.x < 0 then
+        player.isLeft = true
+    end
     -- Cap the player velocity
     if player.velocity.x > player.velocity.max then
         player.velocity.x = player.velocity.max
@@ -63,8 +80,8 @@ function Update(timeDelta)
     player.position.x = player.position.x + player.velocity.x
 
     local xoffset = 0
-    if player.velocity.x>0 then
-        xoffset=7
+    if player.velocity.x > 0 then
+        xoffset = 7
     end
 
     local flag = Flag((player.position.x + xoffset) / 8, (player.position.y + 7) / 8)
@@ -74,7 +91,7 @@ function Update(timeDelta)
     end
 
     player.velocity.y = player.velocity.y + gameRules.gravity
-    player.position.y = player.position.y +player.velocity.y
+    player.position.y = player.position.y + player.velocity.y
     player.onGround = false
 
     if player.velocity.y >= 0 then
@@ -82,13 +99,13 @@ function Update(timeDelta)
         if flag == flags.solid then
             player.position.y = math.floor(player.position.y / 8) * 8
             player.velocity.y = 0
-            player.onGround=true
+            player.onGround = true
         end
     end
 
     if player.velocity.y <= 0 then
         local flag = Flag((player.position.x + 4) / 8,(player.position.y ) / 8)
-        if flag == 0 then
+        if flag == flags.solid then
             player.position.y = math.floor((player.position.y + 8) / 8) * 8
             player.velocity.y = 0
         end
@@ -97,5 +114,5 @@ end
 
 function Draw()
     RedrawDisplay()
-    DrawSprite ( 1, player.position.x, player.position.y , false, false, DrawMode.Sprite, 0)
+    DrawSprite ( player.sprite, player.position.x, player.position.y , player.isLeft, false, DrawMode.Sprite, 0)
 end
