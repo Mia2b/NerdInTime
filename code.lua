@@ -35,6 +35,15 @@ local flags = {
     solid = 0,
 }
 
+local timeStone = {
+    position = {
+        x = 80.0,
+        y = 112.0,
+    },
+    pickedUp = false,
+    sprite = 6
+}
+
 local upHeldDown = false
 local bHeldDown = false
 local isFuture = false
@@ -180,4 +189,5 @@ function Draw()
     RedrawDisplay()
     DrawSprite( player.sprite, player.position.x, player.position.y , player.isLeft, false, DrawMode.Sprite, 0)
     DrawSprite( plantPot.sprite, plantPot.position.x, plantPot.position.y, false, false, DrawMode.Sprite, 0)
+    DrawSprite( timeStone.sprite, timeStone.position.x, timeStone.position.y, false, false, DrawMode.Sprite, 0)
 end
