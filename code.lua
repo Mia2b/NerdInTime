@@ -70,7 +70,7 @@ function Update(timeDelta)
 
     -- Apply player jump velocity when they press A and are grounded
     if Button(Buttons.A, InputState.Down) and player.onGround then
-        PlaySound(6, 6)
+        PlaySound(6, 6) -- TODO: buggy sound when trying to jump but there's a block directly above
         player.velocity.y = -player.jumpPower
     end
 
@@ -149,15 +149,18 @@ function Update(timeDelta)
         player.onGround = true
     end
 
-    -- Pick up pot
-    if Button(Buttons.B, InputState.Down) and math.abs(player.position.x + player.velocity.x - plantPot.position.x) < 10 and not bHeldDown then
-        -- Put down pot
-        PlaySound(7, 5)
-        if plantPot.pickedUp then
-            plantPot.position.y = player.position.y
+    -- Pick up
+    if Button(Buttons.B, InputState.Down)  and not bHeldDown then
+        -- Plant pot
+        if math.abs(player.position.x + player.velocity.x - plantPot.position.x) < 10 and math.abs(player.position.y - plantPot.position.y) < 8 then
+            -- Put down pot
+            PlaySound(7, 5)
+            if plantPot.pickedUp then
+                plantPot.position.y = player.position.y
+            end
+            plantPot.pickedUp = not plantPot.pickedUp
+            bHeldDown = true
         end
-        plantPot.pickedUp = not plantPot.pickedUp
-        bHeldDown = true
     end
 
     if Button(Buttons.B, InputState.Released) then
