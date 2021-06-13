@@ -73,7 +73,7 @@ function Update(timeDelta)
     -- Apply player jump velocity when they press A and are grounded
     if Button(Buttons.A, InputState.Down) and player.onGround then
         PlaySound(6, 6) -- TODO: buggy sound when trying to jump but there's a block directly above
-        player.velocity.y = -player.jumpPower
+        player.velocity.y = -player.jumpPower - math.abs(player.velocity.x) / 5
     end
 
     -- Apply velocity to the player based on movement keys
