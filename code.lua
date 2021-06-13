@@ -1,7 +1,7 @@
 local gameRules = {
     gravity = 0.2,
-    acceleration = 0.5,
-    decceleration = 0.5,
+    acceleration = 0.2,
+    decceleration = 0.2,
 }
 
 local player = {
@@ -71,12 +71,22 @@ function Update(timeDelta)
     elseif not Button(Buttons.Left, InputState.Down) and Button(Buttons.Right, InputState.Down) then
         player.velocity.x = player.velocity.x + player.acceleration
     else
-        if player.velocity.x > player.decceleration then
-            player.velocity.x = player.velocity.x - player.decceleration
-        elseif player.velocity.x < -player.decceleration then
-            player.velocity.x = player.velocity.x + player.decceleration
+        if player.onGround then
+            if player.velocity.x > player.decceleration then
+                player.velocity.x = player.velocity.x - player.decceleration
+            elseif player.velocity.x < -player.decceleration then
+                player.velocity.x = player.velocity.x + player.decceleration
+            else
+                player.velocity.x = 0
+            end
         else
-            player.velocity.x = 0
+            if player.velocity.x > player.decceleration then
+                player.velocity.x = player.velocity.x - player.decceleration / 1.5
+            elseif player.velocity.x < -player.decceleration then
+                player.velocity.x = player.velocity.x + player.decceleration / 1.5
+            else
+                player.velocity.x = 0
+            end
         end
     end
 
@@ -110,6 +120,7 @@ function Update(timeDelta)
 
     if flag == 0 then
         player.position.x = startx
+        player.velocity.x = 0
     end
 
     player.velocity.y = player.velocity.y + gameRules.gravity
