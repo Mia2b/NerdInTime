@@ -1,5 +1,5 @@
 local gameRules = {
-    gravity = 0.25,
+    gravity = 0.2,
     acceleration = 0.2,
     decceleration = 0.2,
 }
@@ -16,7 +16,7 @@ local player = {
     },
     isLeft = false,
     onGround = false,
-    jumpPower = 2.60,
+    jumpPower = 2.0,
     acceleration = 0.5,
     decceleration = 0.5,
     sprite = 1
@@ -47,6 +47,7 @@ local timeStone = {
 local upHeldDown = false
 local bHeldDown = false
 local isFuture = false
+local time = 0
 
 -- Based on https://www.lexaloffle.com/bbs/?tid=27626
 
@@ -57,6 +58,7 @@ function Init()
 end
 
 function Update(timeDelta)
+    time = time + timeDelta
     local startx = player.position.x
     local starty = player.position.y
 
@@ -207,6 +209,7 @@ end
 
 function Draw()
     RedrawDisplay()
+    DrawText(tostring(time), 1, 1, DrawMode.Tile, "large", 5)
     DrawSprite( player.sprite, player.position.x, player.position.y , player.isLeft, false, DrawMode.Sprite, 0)
     DrawSprite( plantPot.sprite, plantPot.position.x, plantPot.position.y, false, false, DrawMode.Sprite, 0)
     DrawSprite( timeStone.sprite, timeStone.position.x, timeStone.position.y, false, false, DrawMode.Sprite, 0)
