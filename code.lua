@@ -1,5 +1,5 @@
 local gameRules = {
-    gravity = 0.2,
+    gravity = 0.25,
     acceleration = 0.2,
     decceleration = 0.2,
 }
@@ -16,7 +16,7 @@ local player = {
     },
     isLeft = false,
     onGround = false,
-    jumpPower = 3.0,
+    jumpPower = 2.60,
     acceleration = 0.5,
     decceleration = 0.5,
     sprite = 1
@@ -52,8 +52,8 @@ function Update(timeDelta)
     local starty = player.position.y
 
     if not player.onGround then
-        player.acceleration = gameRules.acceleration / 2
-        player.decceleration = gameRules.decceleration / 2
+        player.acceleration = gameRules.acceleration / 1.5
+        player.decceleration = gameRules.decceleration / 1.5
     else
         player.acceleration = gameRules.acceleration
         player.decceleration = gameRules.decceleration
@@ -122,14 +122,19 @@ function Update(timeDelta)
         player.position.x = startx
         player.velocity.x = 0
     end
-
-    player.velocity.y = player.velocity.y + gameRules.gravity
+    Button(Buttons.A, InputState.Down)
+    local effectiveGravity = gameRules.gravity
+    if Button(Buttons.A, InputState.Down) then
+        effectiveGravity = effectiveGravity / 2
+    end
+    player.velocity.y = player.velocity.y + effectiveGravity
     player.position.y = player.position.y + player.velocity.y
     player.onGround = false
 
     if player.velocity.y >= 0 then
-        local flag = Flag((player.position.x + 4) / 8, (player.position.y + 8) / 8)
-        if flag == flags.solid then
+        local flagL = Flag((player.position.x + 1) / 8, (player.position.y + 8) / 8)
+        local flagR = Flag((player.position.x + 7) / 8, (player.position.y + 8) / 8)
+        if flagL == flags.solid or flagR == flags.solid then
             player.position.y = math.floor(player.position.y / 8) * 8
             player.velocity.y = 0
             player.onGround = true
@@ -137,8 +142,9 @@ function Update(timeDelta)
     end
 
     if player.velocity.y <= 0 then
-        local flag = Flag((player.position.x + 4) / 8,(player.position.y ) / 8)
-        if flag == flags.solid then
+        local flagL = Flag((player.position.x + 1) / 8,(player.position.y ) / 8)
+        local flagR = Flag((player.position.x + 7) / 8,(player.position.y ) / 8)
+        if flagL == flags.solid or flagR == flags.solid then
             player.position.y = math.floor((player.position.y + 8) / 8) * 8
             player.velocity.y = 0
         end
