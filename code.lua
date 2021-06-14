@@ -45,8 +45,8 @@ local timeStone = {
 }
 
 local camera = {
-    x = 32,
-    y = 32,
+    x = 0,
+    y = 0,
 }
 
 local upHeldDown = false
@@ -60,12 +60,12 @@ function Init()
     BackgroundColor(0)
     PlaySong(0, true)
     local display = Display()
-    ScrollPosition ( camera.x, camera.y )
 end
 
 
 function Update(timeDelta)
     time = time + timeDelta
+    ScrollPosition ( camera.x, camera.y )
     local startx = player.position.x
     local starty = player.position.y
 
@@ -209,6 +209,14 @@ function Update(timeDelta)
         local bgColor = (isFuture and 1 or 0)
         BackgroundColor( bgColor )
         upHeldDown = true
+    end
+
+    if isFuture then
+        camera.x = 32
+        camera.y = 32
+    else
+        camera.x = 0
+        camera.y = 0
     end
 
     if Button(Buttons.Up, InputState.Released) then
