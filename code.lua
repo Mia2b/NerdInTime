@@ -25,7 +25,7 @@ local player = {
 local plantPot = {
     position = {
         x = 50.0,
-        y = 112.0,
+        y = 80.0,
     },
     pickedUp = false,
     sprite = 5
@@ -38,10 +38,15 @@ local flags = {
 local timeStone = {
     position = {
         x = 80.0,
-        y = 112.0,
+        y = 80.0,
     },
     pickedUp = false,
     sprite = 6
+}
+
+local camera = {
+    x = 32,
+    y = 32,
 }
 
 local upHeldDown = false
@@ -55,7 +60,9 @@ function Init()
     BackgroundColor(0)
     PlaySong(0, true)
     local display = Display()
+    ScrollPosition ( camera.x, camera.y )
 end
+
 
 function Update(timeDelta)
     time = time + timeDelta
@@ -71,11 +78,14 @@ function Update(timeDelta)
     end
 
     -- Apply player jump velocity when they press A and are grounded
-    if Button(Buttons.A, InputState.Down) and player.onGround then
+    if Button(Buttons.A, InputState.Down) and player.onGround and not aHeldDown then
         PlaySound(6, 6) -- TODO: buggy sound when trying to jump but there's a block directly above
         player.velocity.y = -player.jumpPower - math.abs(player.velocity.x) / 5
+        aHeldDown = true
     end
-
+    if Button(Buttons.A, InputState.Released) then
+        aHeldDown = false
+    end
     -- Apply velocity to the player based on movement keys
     if Button(Buttons.Left, InputState.Down) and not Button(Buttons.Right, InputState.Down) then
         player.velocity.x = player.velocity.x - player.acceleration
@@ -153,8 +163,8 @@ function Update(timeDelta)
     end
 
     if player.velocity.y <= 0 then
-        local flagL = Flag((player.position.x + 1) / 8,(player.position.y ) / 8)
-        local flagR = Flag((player.position.x + 7) / 8,(player.position.y ) / 8)
+        local flagL = Flag((player.position.x + 1) / 8,(player.position.y) / 8)
+        local flagR = Flag((player.position.x + 7) / 8,(player.position.y) / 8)
         if flagL == flags.solid or flagR == flags.solid then
             player.position.y = math.floor((player.position.y + 8) / 8) * 8
             player.velocity.y = 0
@@ -210,7 +220,7 @@ end
 function Draw()
     RedrawDisplay()
     DrawText(tostring(time), 1, 1, DrawMode.Tile, "large", 5)
-    DrawSprite( player.sprite, player.position.x, player.position.y , player.isLeft, false, DrawMode.Sprite, 0)
-    DrawSprite( plantPot.sprite, plantPot.position.x, plantPot.position.y, false, false, DrawMode.Sprite, 0)
-    DrawSprite( timeStone.sprite, timeStone.position.x, timeStone.position.y, false, false, DrawMode.Sprite, 0)
+    DrawSprite( player.sprite, player.position.x -  camera.x, player.position.y - camera.y, player.isLeft, false, DrawMode.Sprite, 0)
+    DrawSprite( plantPot.sprite, plantPot.position.x - camera.x, plantPot.position.y - camera.y, false, false, DrawMode.Sprite, 0)
+    DrawSprite( timeStone.sprite, timeStone.position.x - camera.x, timeStone.position.y - camera.y, false, false, DrawMode.Sprite, 0)
 end
