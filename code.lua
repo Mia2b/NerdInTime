@@ -1,5 +1,3 @@
--- Controller, World, Player, Flags
-
 
 Controller = {
     Up = {
@@ -97,6 +95,7 @@ Player = {
         right = 7,
         top = 1,
         bot = 8,
+        corner = 3,
     },
     sprite = {
         frame = 1,
@@ -115,12 +114,6 @@ Player = {
         local starty = self.position.y
         local accel = 0
         local deccel = 0
-
-
-        if Controller.Up.pressed then
-            World.camera.x = World.camera.x + 32
-            World.camera.y = World.camera.y + 32
-        end
 
         -- Change the accelaration influence based on if you are in the air or on the ground
         if not self.onGround then
@@ -187,8 +180,8 @@ Player = {
 
         -- Left collision check
         if self.velocity.x < 0 then
-            local flagTop = Flag((self.position.x + self.hitbox.left) / 8, (self.position.y + self.hitbox.top) / 8)
-            local flagBot = Flag((self.position.x + self.hitbox.left) / 8, (self.position.y + self.hitbox.bot - 3) / 8)
+            local flagTop = Flag((self.position.x + self.hitbox.left) / 8, (self.position.y + self.hitbox.top + self.hitbox.corner) / 8)
+            local flagBot = Flag((self.position.x + self.hitbox.left) / 8, (self.position.y + self.hitbox.bot - self.hitbox.corner) / 8)
             if flagTop == Flags.solid or flagBot == Flags.solid then
                 self.position.x = startx -- TODO: Make this hug the wall instead of just resetting the X position
                 self.velocity.x = 0
@@ -197,8 +190,8 @@ Player = {
 
         -- Right collision check
         if self.velocity.x > 0 then
-            local flagTop = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.top) / 8)
-            local flagBot = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot - 3) / 8)
+            local flagTop = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.top + self.hitbox.corner) / 8)
+            local flagBot = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot - self.hitbox.corner) / 8)
             if flagTop == Flags.solid or flagBot == Flags.solid then
                 self.position.x = startx -- TODO: Make this hug the wall instead of just resetting the X position
                 self.velocity.x = 0
@@ -225,7 +218,11 @@ Player = {
                 self.onGround = true
             end
         end
-    end
+    end,
+
+    flipTime = function(self)
+
+    end,
 }
 function Player:new(plyr, x, y)
     plyr = plyr or {} -- create object if user does not provide one
@@ -241,6 +238,17 @@ World = {
     camera = {
         x = 0,
         y = 0,
+        room = {
+            x = 0,
+            y = 0,
+        },
+        goToRoom = function(self, roomX, roomY)
+            self.room.x = roomX
+            self.room.y = roomY
+            self.x = roomX * 32 * 8
+            self.y = roomY * 32 * 8
+
+        end,
     },
     entities = {},
     player = Player:new(nil,64,64),
@@ -254,23 +262,26 @@ World = {
     },
     update = function(self)
         ScrollPosition ( self.camera.x, self.camera.y )
-        -- for i, entity in ipairs(self.entities) do
-        --     entity.update()
-        -- end
+        if next(self.entities) then
+            for i, entity in ipairs(self.entities) do
+                entity.update()
+            end
+        end
         self.player:update()
     end,
     draw = function(self)
         -- Draw all entities
-        -- for i, entity in ipairs(self.entities) do
-        --     -- entity.update()
-        --     DrawSprite( entity.sprite,
-        --                 entity.position.x - self.camera.x,
-        --                 entity.position.y - self.camera.y,
-        --                 false,
-        --                 false,
-        --                 DrawMode.Sprite,
-        --                 0)
-        -- end
+        if next(self.entities) then
+            for i, entity in ipairs(self.entities) do
+                DrawSprite( entity.sprite,
+                            entity.position.x - self.camera.x,
+                            entity.position.y - self.camera.y,
+                            false,
+                            false,
+                            DrawMode.Sprite,
+                            0)
+            end
+        end
 
         -- Draw the player
         DrawSprite( self.player.sprite.frame,
@@ -280,6 +291,9 @@ World = {
                     false,
                     DrawMode.Sprite,
                     0)
+    end,
+
+    parseRoom = function(self)
     end,
 }
 
@@ -297,7 +311,13 @@ function Update(timeDelta)
 
     time = time + timeDelta
 
+    if Controller.Start.pressed then
+        World.camera:goToRoom(1, 1)
+    end
 
+    if Controller.Select.pressed then
+        World.camera:goToRoom(0, 0)
+    end
     -- -- Plant pot collision x
     -- if math.abs(player.position.x + player.velocity.x - plantPot.position.x) < 8 and math.abs(player.position.y - plantPot.position.y) == 0 then
     --     player.position.x = startx
