@@ -107,6 +107,10 @@ Player = {
     acceleration = 0.3,
     decceleration = 0.25,
     jumpPower = 1.75,
+    currentRoom = {
+        x = 0,
+        y = 0,
+    },
 
     -- Player functions
     update = function(self, delta)
@@ -220,8 +224,26 @@ Player = {
         end
     end,
 
-    flipTime = function(self)
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
 
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            PlaySound(8, 3)
+            return false
+        else
+            PlaySound(9, 4)
+            self.currentRoom = newRoom
+            self.position.x = newX
+            self.position.y = newY
+            return true
+        end
     end,
 }
 function Player:new(plyr, x, y)
@@ -234,6 +256,24 @@ function Player:new(plyr, x, y)
 end
 
 
+Levels = {
+    one = {
+        past = {
+            room = {
+                x = 0,
+                y = 0,
+            }
+        },
+        future = {
+            room = {
+                x = 0,
+                y = 1,
+            }
+        },
+    }
+}
+
+
 World = {
     camera = {
         x = 0,
@@ -242,11 +282,11 @@ World = {
             x = 0,
             y = 0,
         },
-        goToRoom = function(self, roomX, roomY)
-            self.room.x = roomX
-            self.room.y = roomY
-            self.x = roomX * 32 * 8
-            self.y = roomY * 32 * 8
+        goToRoom = function(self, room)
+            self.room.x = room.x
+            self.room.y = room.y
+            self.x = room.x * 32 * 8
+            self.y = room.y * 32 * 8
 
         end,
     },
@@ -257,9 +297,7 @@ World = {
         acceleration = 0.2,
         decceleration = 0.2,
     },
-    isFuture = {
-
-    },
+    isFuture = false,
     update = function(self)
         ScrollPosition ( self.camera.x, self.camera.y )
         if next(self.entities) then
@@ -312,12 +350,19 @@ function Update(timeDelta)
     time = time + timeDelta
 
     if Controller.Start.pressed then
-        World.camera:goToRoom(1, 1)
+        if not World.isFuture then
+            if World.player:timeTravel(Levels.one.future.room) then
+                World.camera:goToRoom(Levels.one.future.room)
+                World.isFuture = true
+            end
+        elseif World.isFuture then
+            if World.player:timeTravel(Levels.one.past.room) then
+                World.camera:goToRoom(Levels.one.past.room)
+                World.isFuture = false
+            end
+        end
     end
 
-    if Controller.Select.pressed then
-        World.camera:goToRoom(0, 0)
-    end
     -- -- Plant pot collision x
     -- if math.abs(player.position.x + player.velocity.x - plantPot.position.x) < 8 and math.abs(player.position.y - plantPot.position.y) == 0 then
     --     player.position.x = startx
