@@ -255,6 +255,199 @@ function Player:new(plyr, x, y)
     return plyr
 end
 
+TimeStone = {
+    position = {
+        x = 0.0,
+        y = 0.0
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        maxX = 2,
+    },
+    hitbox = {
+        -- Assuming top left 0,0 start
+        left = 1,
+        right = 7,
+        top = 1,
+        bot = 8,
+        corner = 3,
+    },
+    sprite = 6,
+    pickedUp = false,
+
+    update = function(self, delta)
+        local startx = self.position.x
+        local starty = self.position.y
+        local accel = 0
+        local deccel = 0
+
+        -- Check for interaction
+        if self.pickedUp and Controller.Up.pressed then
+            if World.isFuture then
+                if World.player:timeTravel(Levels.one.past.room) then
+                    World.camera:goToRoom(Levels.one.past.room)
+                end
+            else
+                if World.player:timeTravel(Levels.one.future.room) then
+                    World.camera:goToRoom(Levels.one.future.room)
+                end
+            end
+            World.isFuture = not World.isFuture
+        end
+
+        -- Pick up stone
+        if (Controller.B.pressed
+                and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
+                and math.abs(World.player.position.y - self.position.y) < 8) then
+            PlaySound(7, 5)
+            if self.pickedUp then
+                self.position.y = World.player.position.y
+            end
+            self.pickedUp = not self.pickedUp
+        end
+
+        -- Accelerate the stone towards the ground
+        self.velocity.y = self.velocity.y + World.rules.gravity
+        self.position.y = self.position.y + self.velocity.y
+
+        -- Up collision check
+        if self.velocity.y < 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8,(self.position.y + self.hitbox.top) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8,(self.position.y + self.hitbox.top) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor((self.position.y + self.hitbox.bot) / 8) * 8 -- TODO: Make this hug the top of the head
+                self.velocity.y = 0
+            end
+        end
+
+        -- Down collision check
+        if self.velocity.y > 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8, (self.position.y + self.hitbox.bot) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor(self.position.y / 8) * 8
+                self.velocity.y = 0
+            end
+        end
+
+        -- collision with player
+        if (math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 8
+                and math.abs(World.player.position.y - self.position.y) == 0) then
+            World.player.position.x = startx -- TODO: startx needs to be the previous player position
+            World.player.velocity.x = 0
+        end
+
+        if (math.abs(World.player.position.y - self.position.y) < 4
+                and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
+            World.player.position.y = self.position.y - 4
+            World.player.velocity.y = 0
+            World.player.onGround = true
+        end
+    end,
+
+    -- TODO: add move on time switching
+}
+
+function TimeStone:new(timeStone, x, y)
+    timeStone = timeStone or {}
+    setmetatable(timeStone, self)
+    self.__index = self
+    timeStone.position.x = x
+    timeStone.position.y = y
+    return timeStone
+end
+
+PlantPot = {
+    position = {
+        x = 0.0,
+        y = 0.0
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        maxX = 2,
+    },
+    hitbox = {
+        -- Assuming top left 0,0 start
+        left = 1,
+        right = 7,
+        top = 1,
+        bot = 8,
+        corner = 3,
+    },
+    sprite = 5,
+    pickedUp = false,
+
+    update = function(self, delta)
+        local startx = self.position.x
+        local starty = self.position.y
+        local accel = 0
+        local deccel = 0
+
+        -- Pick up pot
+        if (Controller.B.pressed
+                and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
+                and math.abs(World.player.position.y - self.position.y) < 8) then
+            PlaySound(7, 5)
+            if self.pickedUp then
+                self.position.y = World.player.position.y
+            end
+            self.pickedUp = not self.pickedUp
+        end
+
+        -- Accelerate the stone towards the ground
+        self.velocity.y = self.velocity.y + World.rules.gravity
+        self.position.y = self.position.y + self.velocity.y
+
+        -- Up collision check
+        if self.velocity.y < 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8,(self.position.y + self.hitbox.top) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8,(self.position.y + self.hitbox.top) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor((self.position.y + self.hitbox.bot) / 8) * 8 -- TODO: Make this hug the top of the head
+                self.velocity.y = 0
+            end
+        end
+
+        -- Down collision check
+        if self.velocity.y > 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8, (self.position.y + self.hitbox.bot) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor(self.position.y / 8) * 8
+                self.velocity.y = 0
+            end
+        end
+
+        -- collision with player
+        if (math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 8
+                and math.abs(World.player.position.y - self.position.y) == 0) then
+            World.player.position.x = startx -- TODO: startx needs to be the previous player position
+            World.player.velocity.x = 0
+        end
+
+        if (math.abs(World.player.position.y - self.position.y) < 4
+                and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
+            World.player.position.y = self.position.y - 4
+            World.player.velocity.y = World.isFuture and -5 or 0
+            World.player.velocity.y = -5 -- TODO: remove this line once we have the past/future implemented
+            World.player.onGround = true
+        end
+    end,
+
+    -- TODO: add move on time switching
+}
+
+function PlantPot:new(plantPot, x, y)
+    plantPot = plantPot or {}
+    setmetatable(plantPot, self)
+    self.__index = self
+    plantPot.position.x = x
+    plantPot.position.y = y
+    return plantPot
+end
+
 
 Levels = {
     one = {
@@ -302,7 +495,7 @@ World = {
         ScrollPosition ( self.camera.x, self.camera.y )
         if next(self.entities) then
             for i, entity in ipairs(self.entities) do
-                entity.update()
+                entity:update()
             end
         end
         self.player:update()
@@ -337,9 +530,17 @@ World = {
 
 local time = 0
 
+function SpawnSprites()
+    local ts = TimeStone:new(nil, 200, 200)
+    local pot = PlantPot:new(nil, 100, 100)
+    table.insert(World.entities, ts)
+    table.insert(World.entities, pot)
+end
+
 function Init()
     BackgroundColor(0)
     PlaySong(0, true)
+    SpawnSprites()
 end
 
 
