@@ -1,3 +1,17 @@
+function Deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[Deepcopy(orig_key)] = Deepcopy(orig_value)
+        end
+        setmetatable(copy, Deepcopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
 
 Controller = {
     Up = {
@@ -356,9 +370,7 @@ TimeStone = {
 }
 
 function TimeStone:new(timeStone)
-    local timeStone = timeStone or {}
-    setmetatable(timeStone, self)
-    self.__index = self
+    local timeStone = timeStone or Deepcopy(self)
     return timeStone
 end
 
@@ -447,9 +459,7 @@ PlantPot = {
 }
 
 function PlantPot:new(plantPot)
-    local plantPot = plantPot or {}
-    setmetatable(plantPot, self)
-    self.__index = self
+    local plantPot = plantPot or Deepcopy(self)
     return plantPot
 end
 
@@ -560,18 +570,10 @@ World = {
 
 local time = 0
 
-function SpawnSprites()
-    local ts = TimeStone:new(nil, 200, 200)
-    local pot = PlantPot:new(nil, 100, 100)
-    table.insert(World.entities, ts)
-    table.insert(World.entities, pot)
-end
-
 function Init()
     BackgroundColor(0)
     PlaySong(0, true)
     World:startLevel(Levels.one)
-    -- SpawnSprites()
 end
 
 
