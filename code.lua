@@ -93,6 +93,11 @@ Flags = {
     solid = 0,
     plant = 1,
     stone = 2,
+    woodX = 3,
+    woodY = 4,
+    metalX = 5,
+    metalY = 6,
+    exit = 14,
     player = 15,
 }
 
@@ -124,6 +129,7 @@ Player = {
     acceleration = 0.3,
     decceleration = 0.25,
     jumpPower = 1.75,
+    empty = true,
     currentRoom = {
         x = 0,
         y = 0,
@@ -277,6 +283,7 @@ function Player:new(plyr, x, y)
 end
 
 TimeStone = {
+    weight = 1,
     position = {
         x = 0.0,
         y = 0.0
@@ -319,10 +326,15 @@ TimeStone = {
             PlaySound(7, 5)
             if self.pickedUp then
                 self.position.y = World.player.position.y
+                self.pickedUp = false
+                World.player.empty = true
             else
-                self.position.y = World.player.position.y - 3
+                if World.player.empty then
+                    self.position.y = World.player.position.y - 3
+                    self.pickedUp = true
+                    World.player.empty = false
+                end
             end
-            self.pickedUp = not self.pickedUp
         end
 
         if self.pickedUp then
@@ -530,10 +542,15 @@ WoodenSpringY = {
             PlaySound(7, 5)
             if self.pickedUp then
                 self.position.y = World.player.position.y
+                self.pickedUp = false
+                World.player.empty = true
             else
-                self.position.y = World.player.position.y - 3
+                if World.player.empty then
+                    self.position.y = World.player.position.y - 3
+                    self.pickedUp = true
+                    World.player.empty = false
+                end
             end
-            self.pickedUp = not self.pickedUp
         end
 
         if self.pickedUp then
@@ -621,10 +638,15 @@ MetalSpringY = {
             PlaySound(7, 5)
             if self.pickedUp then
                 self.position.y = World.player.position.y
+                self.pickedUp = false
+                World.player.empty = true
             else
-                self.position.y = World.player.position.y - 3
+                if World.player.empty then
+                    self.position.y = World.player.position.y - 3
+                    self.pickedUp = true
+                    World.player.empty = false
+                end
             end
-            self.pickedUp = not self.pickedUp
         end
 
         if self.pickedUp then
@@ -832,10 +854,15 @@ PlantPot = {
             PlaySound(7, 5)
             if self.pickedUp then
                 self.position.y = World.player.position.y
+                self.pickedUp = false
+                World.player.empty = true
             else
-                self.position.y = World.player.position.y - 3
+                if World.player.empty then
+                    self.position.y = World.player.position.y - 3
+                    self.pickedUp = true
+                    World.player.empty = false
+                end
             end
-            self.pickedUp = not self.pickedUp
         end
 
         if self.pickedUp then
@@ -913,6 +940,123 @@ function PlantPot:new(plantPot)
     local plantPot = plantPot or Deepcopy(self)
     return plantPot
 end
+
+GrownPlant = {
+    position = {
+        x = 0.0,
+        y = 0.0
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        maxX = 2,
+    },
+    hitbox = {
+        -- Assuming top left 0,0 start
+        left = 1,
+        right = 7,
+        top = 1,
+        bot = 8,
+        corner = 3,
+    },
+    sprite = 5,
+    pickedUp = false,
+
+    update = function(self, delta)
+        -- Pick up pot
+        if (Controller.B.pressed
+                and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
+                and math.abs(World.player.position.y - self.position.y) < 8) then
+            PlaySound(7, 5)
+            if self.pickedUp then
+                self.position.y = World.player.position.y
+                self.pickedUp = false
+                World.player.empty = true
+            else
+                if World.player.empty then
+                    self.position.y = World.player.position.y - 3
+                    self.pickedUp = true
+                    World.player.empty = false
+                end
+            end
+        end
+
+        if self.pickedUp then
+            local offsetX = World.player.isLeft and -8 or 8
+            self.position.x = World.player.position.x + offsetX
+            self.position.y = World.player.position.y - 3
+        else
+            -- Accelerate the pot towards the ground
+            self.velocity.y = self.velocity.y + World.rules.gravity
+            self.position.y = self.position.y + self.velocity.y
+        end
+
+        -- Up collision check
+        if self.velocity.y < 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8,(self.position.y + self.hitbox.top) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8,(self.position.y + self.hitbox.top) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor((self.position.y + self.hitbox.bot) / 8) * 8 -- TODO: Make this hug the top of the head
+                self.velocity.y = 0
+            end
+        end
+
+        -- Down collision check
+        if self.velocity.y > 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8, (self.position.y + self.hitbox.bot) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor(self.position.y / 8) * 8
+                self.velocity.y = 0
+            end
+        end
+
+        -- collision with player
+        if (math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 8
+                and math.abs(World.player.position.y - self.position.y) == 0) then
+            World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
+            World.player.velocity.x = 0
+        end
+
+        if (math.abs(World.player.position.y - self.position.y) < 4
+                and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
+            World.player.position.y = self.position.y - 4
+            World.player.velocity.y = World.isFuture and -5 or 0
+            World.player.onGround = true
+        end
+    end,
+    setPosition = function(self, x, y)
+        self.position.x = x
+        self.position.y = y
+    end,
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            return false
+        else
+            self.currentRoom = newRoom
+            self.position.x = newX
+            self.position.y = newY
+            self.sprite = World.isFuture and 17 or 5
+            return true
+        end
+    end,
+    -- TODO: add move on time switching
+}
+
+function GrownPlant:new(grownPlant)
+    local grownPlant = grownPlant or Deepcopy(self)
+    return grownPlant
+end
+
 
 ExitDoor = {
     position = {
@@ -1039,7 +1183,6 @@ World = {
             self.room.y = room.y
             self.x = room.x * 32 * 8
             self.y = room.y * 32 * 8
-
         end,
     },
     level = nil,
@@ -1090,22 +1233,63 @@ World = {
         for scanY = startY, startY + 32, 1 do
             for scanX = startX, startX + 32, 1 do
                 local flagScan = Flag(scanX, scanY)
-                if flagScan == Flags.plant then
+                if     flagScan == Flags.plant then
                     local ent = PlantPot:new()
                     ent:setPosition(scanX * 8, scanY * 8)
                     table.insert(self.level.past.entities, ent)
+
                 elseif flagScan == Flags.stone then
                     local ent = TimeStone:new()
                     ent:setPosition(scanX * 8, scanY * 8)
                     table.insert(self.level.past.entities, ent)
-                elseif flagScan == Flags.stone then
-                    local newPlayer = Player:new(nil, scanX * 8, scanY * 8)
-                    self.player = newPlayer
+
+                elseif flagScan == Flags.woodX then
+                    local ent = WoodenSpringX:new()
+                    ent:setPosition(scanX * 8, scanY * 8)
+                    table.insert(self.level.past.entities, ent)
+
+                elseif flagScan == Flags.woodY then
+                    local ent = WoodenSpringY:new()
+                    ent:setPosition(scanX * 8, scanY * 8)
+                    table.insert(self.level.past.entities, ent)
+
+                elseif flagScan == Flags.metalX then
+                    local ent = MetalSpringX:new()
+                    ent:setPosition(scanX * 8, scanY * 8)
+                    table.insert(self.level.past.entities, ent)
+
+                elseif flagScan == Flags.metalY then
+                    local ent = MetalSpringY:new()
+                    ent:setPosition(scanX * 8, scanY * 8)
+                    table.insert(self.level.past.entities, ent)
+
+                elseif flagScan == Flags.exit then
+                    local ent = ExitDoor:new()
+                    ent:setPosition(scanX * 8, scanY * 8)
+                    table.insert(self.level.past.entities, ent)
+
+                elseif flagScan == Flags.player then
+                    self.player.position.x = scanX * 8
+                    self.player.position.y = scanY * 8
                 end
             end
         end
         self.level.entities = self.level.past.entities
+    end,
+    timeTravel = function(self)
+        if not World.isFuture then
+            if World.player:timeTravel(self.level.future.room) then
+                World.camera:goToRoom(self.level.future.room)
 
+                World.isFuture = true
+            end
+        elseif World.isFuture then
+            if World.player:timeTravel(self.level.past.room) then
+                World.camera:goToRoom(self.level.past.room)
+
+                World.isFuture = false
+            end
+        end
     end,
 }
 
@@ -1125,17 +1309,7 @@ function Update(timeDelta)
     time = time + timeDelta
 
     if Controller.Start.pressed then
-        if not World.isFuture then
-            if World.player:timeTravel(Levels.one.future.room) then
-                World.camera:goToRoom(Levels.one.future.room)
-                World.isFuture = true
-            end
-        elseif World.isFuture then
-            if World.player:timeTravel(Levels.one.past.room) then
-                World.camera:goToRoom(Levels.one.past.room)
-                World.isFuture = false
-            end
-        end
+        World:timeTravel()
     end
 end
 
