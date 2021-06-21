@@ -128,11 +128,15 @@ Player = {
         x = 0,
         y = 0,
     },
+    previousPosition = {
+        x = 0.0,
+        y = 0.0,
+    },
 
     -- Player functions
     update = function(self, delta)
-        local startx = self.position.x
-        local starty = self.position.y
+        self.previousPosition.x = self.position.x
+        self.previousPosition.y = self.position.y
         local accel = 0
         local deccel = 0
 
@@ -204,7 +208,7 @@ Player = {
             local flagTop = Flag((self.position.x + self.hitbox.left) / 8, (self.position.y + self.hitbox.top + self.hitbox.corner) / 8)
             local flagBot = Flag((self.position.x + self.hitbox.left) / 8, (self.position.y + self.hitbox.bot - self.hitbox.corner) / 8)
             if flagTop == Flags.solid or flagBot == Flags.solid then
-                self.position.x = startx -- TODO: Make this hug the wall instead of just resetting the X position
+                self.position.x = self.previousPosition.x -- TODO: Make this hug the wall instead of just resetting the X position
                 self.velocity.x = 0
             end
         end
@@ -214,7 +218,7 @@ Player = {
             local flagTop = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.top + self.hitbox.corner) / 8)
             local flagBot = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot - self.hitbox.corner) / 8)
             if flagTop == Flags.solid or flagBot == Flags.solid then
-                self.position.x = startx -- TODO: Make this hug the wall instead of just resetting the X position
+                self.position.x = self.previousPosition.x -- TODO: Make this hug the wall instead of just resetting the X position
                 self.velocity.x = 0
             end
         end
@@ -294,11 +298,6 @@ TimeStone = {
     pickedUp = false,
 
     update = function(self, delta)
-        local startx = self.position.x
-        local starty = self.position.y
-        local accel = 0
-        local deccel = 0
-
         -- Check for interaction
         if self.pickedUp and Controller.Up.pressed then
             if World.isFuture then
@@ -320,13 +319,21 @@ TimeStone = {
             PlaySound(7, 5)
             if self.pickedUp then
                 self.position.y = World.player.position.y
+            else
+                self.position.y = World.player.position.y - 3
             end
             self.pickedUp = not self.pickedUp
         end
 
-        -- Accelerate the stone towards the ground
-        self.velocity.y = self.velocity.y + World.rules.gravity
-        self.position.y = self.position.y + self.velocity.y
+        if self.pickedUp then
+            local offsetX = World.player.isLeft and -8 or 8
+            self.position.x = World.player.position.x + offsetX
+            self.position.y = World.player.position.y - 3
+        else
+            -- Accelerate the stone towards the ground
+            self.velocity.y = self.velocity.y + World.rules.gravity
+            self.position.y = self.position.y + self.velocity.y
+        end
 
         -- Up collision check
         if self.velocity.y < 0 then
@@ -351,7 +358,7 @@ TimeStone = {
         -- collision with player
         if (math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 8
                 and math.abs(World.player.position.y - self.position.y) == 0) then
-            World.player.position.x = startx -- TODO: startx needs to be the previous player position
+            World.player.position.x = World.player.previousPosition.x
             World.player.velocity.x = 0
         end
 
@@ -366,12 +373,434 @@ TimeStone = {
         self.position.x = x
         self.position.y = y
     end,
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            return false
+        else
+            self.currentRoom = newRoom
+            self.position.x = newX
+            self.position.y = newY
+            return true
+        end
+    end,
     -- TODO: add move on time switching
 }
 
 function TimeStone:new(timeStone)
     local timeStone = timeStone or Deepcopy(self)
     return timeStone
+end
+
+WoodenSpringX = {
+    position = {
+        x = 0.0,
+        y = 0.0
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        maxX = 2,
+    },
+    hitbox = {
+        -- Assuming top left 0,0 start
+        left = 1,
+        right = 7,
+        top = 1,
+        bot = 8,
+        corner = 3,
+    },
+    sprite = 7,
+    pickedUp = false,
+
+    update = function(self, delta)
+        if self.pickedUp then
+            local offsetX = World.player.isLeft and -8 or 8
+            self.position.x = World.player.position.x + offsetX
+            self.position.y = World.player.position.y - 3
+        else
+            -- Accelerate the spring towards the ground
+            self.velocity.y = self.velocity.y + World.rules.gravity
+            self.position.y = self.position.y + self.velocity.y
+        end
+
+        -- Up collision check
+        if self.velocity.y < 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8,(self.position.y + self.hitbox.top) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8,(self.position.y + self.hitbox.top) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor((self.position.y + self.hitbox.bot) / 8) * 8 -- TODO: Make this hug the top of the head
+                self.velocity.y = 0
+            end
+        end
+
+        -- Down collision check
+        if self.velocity.y > 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8, (self.position.y + self.hitbox.bot) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor(self.position.y / 8) * 8
+                self.velocity.y = 0
+            end
+        end
+        -- collision with player
+        if ((World.player.position.x + World.player.velocity.x - self.position.x) < 8
+                and math.abs(World.player.position.y - self.position.y) == 0) then
+            World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
+            World.player.velocity.x = World.isFuture and 0 or 5
+        end
+
+        if ((self.position.x - World.player.position.x + World.player.velocity.x ) < 8
+                and math.abs(World.player.position.y - self.position.y) == 0) then
+            World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
+            World.player.velocity.x = World.isFuture and 0 or -5
+        end
+
+        if (math.abs(World.player.position.y - self.position.y) < 4
+                and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
+            World.player.position.y = self.position.y - 4
+            World.player.onGround = true
+        end
+    end,
+    setPosition = function(self, x, y)
+        self.position.x = x
+        self.position.y = y
+    end,
+        timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            return false
+        else
+            self.currentRoom = newRoom
+            self.position.x = newX
+            self.position.y = newY
+            return true
+        end
+    end,
+    -- TODO: add move on time switching
+}
+
+function WoodenSpringX:new(woodSpring)
+    local woodSpring = woodSpring or Deepcopy(self)
+    return woodSpring
+end
+
+WoodenSpringY = {
+    position = {
+        x = 0.0,
+        y = 0.0
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        maxX = 2,
+    },
+    hitbox = {
+        -- Assuming top left 0,0 start
+        left = 1,
+        right = 7,
+        top = 1,
+        bot = 8,
+        corner = 3,
+    },
+    sprite = 23,
+    pickedUp = false,
+
+    update = function(self, delta)
+        -- Pick up pot
+        if (Controller.B.pressed
+                and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
+                and math.abs(World.player.position.y - self.position.y) < 8) then
+            PlaySound(7, 5)
+            if self.pickedUp then
+                self.position.y = World.player.position.y
+            else
+                self.position.y = World.player.position.y - 3
+            end
+            self.pickedUp = not self.pickedUp
+        end
+
+        if self.pickedUp then
+            local offsetX = World.player.isLeft and -8 or 8
+            self.position.x = World.player.position.x + offsetX
+            self.position.y = World.player.position.y - 3
+        else
+            -- Accelerate the pot towards the ground
+            self.velocity.y = self.velocity.y + World.rules.gravity
+            self.position.y = self.position.y + self.velocity.y
+        end
+
+        -- Up collision check
+        if self.velocity.y < 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8,(self.position.y + self.hitbox.top) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8,(self.position.y + self.hitbox.top) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor((self.position.y + self.hitbox.bot) / 8) * 8 -- TODO: Make this hug the top of the head
+                self.velocity.y = 0
+            end
+        end
+
+        -- Down collision check
+        if self.velocity.y > 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8, (self.position.y + self.hitbox.bot) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor(self.position.y / 8) * 8
+                self.velocity.y = 0
+            end
+        end
+
+        -- collision with player
+        if (math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 8
+                and math.abs(World.player.position.y - self.position.y) == 0) then
+            World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
+            World.player.velocity.x = 0
+        end
+
+        if (math.abs(World.player.position.y - self.position.y) < 4
+                and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
+            World.player.position.y = self.position.y - 4
+            World.player.velocity.y = World.isFuture and 0 or -5
+            World.player.onGround = true
+        end
+    end,
+    setPosition = function(self, x, y)
+        self.position.x = x
+        self.position.y = y
+    end,
+    -- TODO: add move on time switching
+}
+
+function WoodenSpringY:new(woodSpring)
+    local woodSpring = woodSpring or Deepcopy(self)
+    return woodSpring
+end
+
+MetalSpringY = {
+    position = {
+        x = 0.0,
+        y = 0.0
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        maxX = 2,
+    },
+    hitbox = {
+        -- Assuming top left 0,0 start
+        left = 1,
+        right = 7,
+        top = 1,
+        bot = 8,
+        corner = 3,
+    },
+    sprite = 22,
+    pickedUp = false,
+
+    update = function(self, delta)
+        -- Pick up pot
+        if (Controller.B.pressed
+                and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
+                and math.abs(World.player.position.y - self.position.y) < 8) then
+            PlaySound(7, 5)
+            if self.pickedUp then
+                self.position.y = World.player.position.y
+            else
+                self.position.y = World.player.position.y - 3
+            end
+            self.pickedUp = not self.pickedUp
+        end
+
+        if self.pickedUp then
+            local offsetX = World.player.isLeft and -8 or 8
+            self.position.x = World.player.position.x + offsetX
+            self.position.y = World.player.position.y - 3
+        else
+            -- Accelerate the pot towards the ground
+            self.velocity.y = self.velocity.y + World.rules.gravity
+            self.position.y = self.position.y + self.velocity.y
+        end
+
+        -- Up collision check
+        if self.velocity.y < 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8,(self.position.y + self.hitbox.top) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8,(self.position.y + self.hitbox.top) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor((self.position.y + self.hitbox.bot) / 8) * 8 -- TODO: Make this hug the top of the head
+                self.velocity.y = 0
+            end
+        end
+
+        -- Down collision check
+        if self.velocity.y > 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8, (self.position.y + self.hitbox.bot) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor(self.position.y / 8) * 8
+                self.velocity.y = 0
+            end
+        end
+
+        -- collision with player
+        if (math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 8
+                and math.abs(World.player.position.y - self.position.y) == 0) then
+            World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
+            World.player.velocity.x = 0
+        end
+
+        if (math.abs(World.player.position.y - self.position.y) < 4
+                and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
+            World.player.position.y = self.position.y - 4
+            World.player.velocity.y = -5
+            World.player.onGround = true
+        end
+    end,
+    setPosition = function(self, x, y)
+        self.position.x = x
+        self.position.y = y
+    end,
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            return false
+        else
+            self.currentRoom = newRoom
+            self.position.x = newX
+            self.position.y = newY
+            return true
+        end
+    end,
+    -- TODO: add move on time switching
+}
+
+function MetalSpringY:new(metalSpring)
+    local metalSpring = metalSpring or Deepcopy(self)
+    return metalSpring
+end
+
+MetalSpringX = {
+    position = {
+        x = 0.0,
+        y = 0.0
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        maxX = 2,
+    },
+    hitbox = {
+        -- Assuming top left 0,0 start
+        left = 1,
+        right = 7,
+        top = 1,
+        bot = 8,
+        corner = 3,
+    },
+    sprite = 21,
+    pickedUp = false,
+
+    update = function(self, delta)
+        if self.pickedUp then
+            local offsetX = World.player.isLeft and -8 or 8
+            self.position.x = World.player.position.x + offsetX
+            self.position.y = World.player.position.y - 3
+        else
+            -- Accelerate the spring towards the ground
+            self.velocity.y = self.velocity.y + World.rules.gravity
+            self.position.y = self.position.y + self.velocity.y
+        end
+
+        -- Up collision check
+        if self.velocity.y < 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8,(self.position.y + self.hitbox.top) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8,(self.position.y + self.hitbox.top) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor((self.position.y + self.hitbox.bot) / 8) * 8 -- TODO: Make this hug the top of the head
+                self.velocity.y = 0
+            end
+        end
+
+        -- Down collision check
+        if self.velocity.y > 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8, (self.position.y + self.hitbox.bot) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor(self.position.y / 8) * 8
+                self.velocity.y = 0
+            end
+        end
+        -- collision with player
+        if ((World.player.position.x + World.player.velocity.x - self.position.x) < 8
+                and math.abs(World.player.position.y - self.position.y) == 0) then
+            World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
+            World.player.velocity.x = 5
+        end
+
+        if ((self.position.x - World.player.position.x + World.player.velocity.x ) < 8
+                and math.abs(World.player.position.y - self.position.y) == 0) then
+            World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
+            World.player.velocity.x = -5
+        end
+
+        if (math.abs(World.player.position.y - self.position.y) < 4
+                and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
+            World.player.position.y = self.position.y - 4
+            World.player.onGround = true
+        end
+    end,
+    setPosition = function(self, x, y)
+        self.position.x = x
+        self.position.y = y
+    end,
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            return false
+        else
+            self.currentRoom = newRoom
+            self.position.x = newX
+            self.position.y = newY
+            return true
+        end
+    end,
+    -- TODO: add move on time switching
+}
+
+function MetalSpringX:new(metalSpring)
+    local metalSpring = metalSpring or Deepcopy(self)
+    return metalSpring
 end
 
 PlantPot = {
@@ -396,11 +825,6 @@ PlantPot = {
     pickedUp = false,
 
     update = function(self, delta)
-        local startx = self.position.x
-        local starty = self.position.y
-        local accel = 0
-        local deccel = 0
-
         -- Pick up pot
         if (Controller.B.pressed
                 and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
@@ -408,13 +832,21 @@ PlantPot = {
             PlaySound(7, 5)
             if self.pickedUp then
                 self.position.y = World.player.position.y
+            else
+                self.position.y = World.player.position.y - 3
             end
             self.pickedUp = not self.pickedUp
         end
 
-        -- Accelerate the stone towards the ground
-        self.velocity.y = self.velocity.y + World.rules.gravity
-        self.position.y = self.position.y + self.velocity.y
+        if self.pickedUp then
+            local offsetX = World.player.isLeft and -8 or 8
+            self.position.x = World.player.position.x + offsetX
+            self.position.y = World.player.position.y - 3
+        else
+            -- Accelerate the pot towards the ground
+            self.velocity.y = self.velocity.y + World.rules.gravity
+            self.position.y = self.position.y + self.velocity.y
+        end
 
         -- Up collision check
         if self.velocity.y < 0 then
@@ -439,7 +871,7 @@ PlantPot = {
         -- collision with player
         if (math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 8
                 and math.abs(World.player.position.y - self.position.y) == 0) then
-            World.player.position.x = startx -- TODO: startx needs to be the previous player position
+            World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
             World.player.velocity.x = 0
         end
 
@@ -447,7 +879,6 @@ PlantPot = {
                 and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
             World.player.position.y = self.position.y - 4
             World.player.velocity.y = World.isFuture and -5 or 0
-            World.player.velocity.y = -5 -- TODO: remove this line once we have the past/future implemented
             World.player.onGround = true
         end
     end,
@@ -455,12 +886,122 @@ PlantPot = {
         self.position.x = x
         self.position.y = y
     end,
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            return false
+        else
+            self.currentRoom = newRoom
+            self.position.x = newX
+            self.position.y = newY
+            self.sprite = World.isFuture and 17 or 5
+            return true
+        end
+    end,
     -- TODO: add move on time switching
 }
 
 function PlantPot:new(plantPot)
     local plantPot = plantPot or Deepcopy(self)
     return plantPot
+end
+
+ExitDoor = {
+    position = {
+        x = 0.0,
+        y = 0.0
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        maxX = 2,
+    },
+    hitbox = {
+        -- Assuming top left 0,0 start
+        left = 1,
+        right = 7,
+        top = 1,
+        bot = 8,
+        corner = 3,
+    },
+    sprite = 20,
+    pickedUp = false,
+
+    update = function(self, delta)
+        if self.pickedUp then
+            local offsetX = World.player.isLeft and -8 or 8
+            self.position.x = World.player.position.x + offsetX
+            self.position.y = World.player.position.y - 3
+        else
+            -- Accelerate the pot towards the ground
+            self.velocity.y = self.velocity.y + World.rules.gravity
+            self.position.y = self.position.y + self.velocity.y
+        end
+
+        -- Up collision check
+        if self.velocity.y < 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8,(self.position.y + self.hitbox.top) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8,(self.position.y + self.hitbox.top) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor((self.position.y + self.hitbox.bot) / 8) * 8 -- TODO: Make this hug the top of the head
+                self.velocity.y = 0
+            end
+        end
+
+        -- Down collision check
+        if self.velocity.y > 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8, (self.position.y + self.hitbox.bot) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor(self.position.y / 8) * 8
+                self.velocity.y = 0
+            end
+        end
+
+        -- collision with player
+        if (math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 8
+                and math.abs(World.player.position.y - self.position.y) < 2) then
+            return
+            -- TODO: Go to win screen
+        end
+    end,
+    setPosition = function(self, x, y)
+        self.position.x = x
+        self.position.y = y
+    end,
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            return false
+        else
+            self.currentRoom = newRoom
+            self.position.x = newX
+            self.position.y = newY
+            return true
+        end
+    end,
+    -- TODO: add move on time switching
+}
+
+function ExitDoor:new(exitDoor)
+    local exitDoor = exitDoor or Deepcopy(self)
+    return exitDoor
 end
 
 
