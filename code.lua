@@ -307,16 +307,7 @@ TimeStone = {
     update = function(self, delta)
         -- Check for interaction
         if self.pickedUp and Controller.Up.pressed then
-            if World.isFuture then
-                if World.player:timeTravel(Levels.one.past.room) then
-                    World.camera:goToRoom(Levels.one.past.room)
-                end
-            else
-                if World.player:timeTravel(Levels.one.future.room) then
-                    World.camera:goToRoom(Levels.one.future.room)
-                end
-            end
-            World.isFuture = not World.isFuture
+            World:timeTravel()
         end
 
         -- Pick up stone
@@ -386,8 +377,8 @@ TimeStone = {
         self.position.y = y
     end,
     timeTravel = function(self, newRoom)
-        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
-        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
 
         -- Check the player can tp
         local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
@@ -398,13 +389,17 @@ TimeStone = {
         if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
             return false
         else
-            self.currentRoom = newRoom
-            self.position.x = newX
-            self.position.y = newY
             return true
         end
     end,
-    -- TODO: add move on time switching
+    spawnFuture = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+        local ent = TimeStone:new()
+        ent:setPosition(newX, newY)
+        ent.pickedUp = self.pickedUp
+        table.insert(World.level.future.entities, ent)
+    end,
 }
 
 function TimeStone:new(timeStone)
@@ -486,9 +481,9 @@ WoodenSpringX = {
         self.position.x = x
         self.position.y = y
     end,
-        timeTravel = function(self, newRoom)
-        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
-        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
 
         -- Check the player can tp
         local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
@@ -499,13 +494,16 @@ WoodenSpringX = {
         if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
             return false
         else
-            self.currentRoom = newRoom
-            self.position.x = newX
-            self.position.y = newY
             return true
         end
     end,
-    -- TODO: add move on time switching
+    spawnFuture = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+        local ent = GrownPlant:new()
+        ent:setPosition(newX, newY)
+        table.insert(World.level.future.entities, ent)
+    end,
 }
 
 function WoodenSpringX:new(woodSpring)
@@ -601,7 +599,29 @@ WoodenSpringY = {
         self.position.x = x
         self.position.y = y
     end,
-    -- TODO: add move on time switching
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            return false
+        else
+            return true
+        end
+    end,
+    spawnFuture = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+        local ent = GrownPlant:new()
+        ent:setPosition(newX, newY)
+        table.insert(World.level.future.entities, ent)
+    end,
 }
 
 function WoodenSpringY:new(woodSpring)
@@ -698,8 +718,8 @@ MetalSpringY = {
         self.position.y = y
     end,
     timeTravel = function(self, newRoom)
-        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
-        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
 
         -- Check the player can tp
         local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
@@ -710,13 +730,16 @@ MetalSpringY = {
         if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
             return false
         else
-            self.currentRoom = newRoom
-            self.position.x = newX
-            self.position.y = newY
             return true
         end
     end,
-    -- TODO: add move on time switching
+    spawnFuture = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+        local ent = GrownPlant:new()
+        ent:setPosition(newX, newY)
+        table.insert(World.level.future.entities, ent)
+    end,
 }
 
 function MetalSpringY:new(metalSpring)
@@ -799,8 +822,8 @@ MetalSpringX = {
         self.position.y = y
     end,
     timeTravel = function(self, newRoom)
-        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
-        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
 
         -- Check the player can tp
         local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
@@ -811,13 +834,16 @@ MetalSpringX = {
         if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
             return false
         else
-            self.currentRoom = newRoom
-            self.position.x = newX
-            self.position.y = newY
             return true
         end
     end,
-    -- TODO: add move on time switching
+    spawnFuture = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+        local ent = GrownPlant:new()
+        ent:setPosition(newX, newY)
+        table.insert(World.level.future.entities, ent)
+    end,
 }
 
 function MetalSpringX:new(metalSpring)
@@ -914,8 +940,8 @@ PlantPot = {
         self.position.y = y
     end,
     timeTravel = function(self, newRoom)
-        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
-        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
 
         -- Check the player can tp
         local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
@@ -926,14 +952,16 @@ PlantPot = {
         if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
             return false
         else
-            self.currentRoom = newRoom
-            self.position.x = newX
-            self.position.y = newY
-            self.sprite = World.isFuture and 17 or 5
             return true
         end
     end,
-    -- TODO: add move on time switching
+    spawnFuture = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+        local ent = GrownPlant:new()
+        ent:setPosition(newX, newY)
+        table.insert(World.level.future.entities, ent)
+    end,
 }
 
 function PlantPot:new(plantPot)
@@ -959,27 +987,27 @@ GrownPlant = {
         bot = 8,
         corner = 3,
     },
-    sprite = 5,
+    sprite = 17,
     pickedUp = false,
 
     update = function(self, delta)
         -- Pick up pot
-        if (Controller.B.pressed
-                and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
-                and math.abs(World.player.position.y - self.position.y) < 8) then
-            PlaySound(7, 5)
-            if self.pickedUp then
-                self.position.y = World.player.position.y
-                self.pickedUp = false
-                World.player.empty = true
-            else
-                if World.player.empty then
-                    self.position.y = World.player.position.y - 3
-                    self.pickedUp = true
-                    World.player.empty = false
-                end
-            end
-        end
+        -- if (Controller.B.pressed
+        --         and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
+        --         and math.abs(World.player.position.y - self.position.y) < 8) then
+        --     PlaySound(7, 5)
+        --     if self.pickedUp then
+        --         self.position.y = World.player.position.y
+        --         self.pickedUp = false
+        --         World.player.empty = true
+        --     else
+        --         if World.player.empty then
+        --             self.position.y = World.player.position.y - 3
+        --             self.pickedUp = true
+        --             World.player.empty = false
+        --         end
+        --     end
+        -- end
 
         if self.pickedUp then
             local offsetX = World.player.isLeft and -8 or 8
@@ -1021,7 +1049,7 @@ GrownPlant = {
         if (math.abs(World.player.position.y - self.position.y) < 4
                 and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
             World.player.position.y = self.position.y - 4
-            World.player.velocity.y = World.isFuture and -5 or 0
+            World.player.velocity.y = -5
             World.player.onGround = true
         end
     end,
@@ -1030,8 +1058,8 @@ GrownPlant = {
         self.position.y = y
     end,
     timeTravel = function(self, newRoom)
-        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
-        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
 
         -- Check the player can tp
         local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
@@ -1042,14 +1070,17 @@ GrownPlant = {
         if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
             return false
         else
-            self.currentRoom = newRoom
-            self.position.x = newX
-            self.position.y = newY
             self.sprite = World.isFuture and 17 or 5
             return true
         end
     end,
-    -- TODO: add move on time switching
+    spawnFuture = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+        local ent = GrownPlant:new()
+        ent:setPosition(newX, newY)
+        table.insert(World.level.future.entities, ent)
+    end,
 }
 
 function GrownPlant:new(grownPlant)
@@ -1122,8 +1153,8 @@ ExitDoor = {
         self.position.y = y
     end,
     timeTravel = function(self, newRoom)
-        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
-        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
 
         -- Check the player can tp
         local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
@@ -1134,13 +1165,16 @@ ExitDoor = {
         if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
             return false
         else
-            self.currentRoom = newRoom
-            self.position.x = newX
-            self.position.y = newY
             return true
         end
     end,
-    -- TODO: add move on time switching
+    spawnFuture = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+        local ent = GrownPlant:new()
+        ent:setPosition(newX, newY)
+        table.insert(World.level.future.entities, ent)
+    end,
 }
 
 function ExitDoor:new(exitDoor)
@@ -1165,7 +1199,11 @@ Levels = {
             },
             entities = {}
         },
-        entities = {}
+        entities = {},
+        room = {
+            x = 0,
+            y = 0,
+        }
     }
 }
 
@@ -1275,18 +1313,30 @@ World = {
             end
         end
         self.level.entities = self.level.past.entities
+        self.level.room = self.level.past.room
     end,
     timeTravel = function(self)
         if not World.isFuture then
             if World.player:timeTravel(self.level.future.room) then
+                self.level.future.entities = {}
+                if next(self.level.entities) then
+                    for i, entity in ipairs(self.level.entities) do
+                        if entity:timeTravel(self.level.future.room) then
+                            entity:spawnFuture(self.level.future.room)
+                        end
+                    end
+                end
                 World.camera:goToRoom(self.level.future.room)
-
+                -- Add spawning here
+                self.level.room = self.level.future.room
+                self.level.entities = self.level.future.entities
                 World.isFuture = true
             end
         elseif World.isFuture then
             if World.player:timeTravel(self.level.past.room) then
                 World.camera:goToRoom(self.level.past.room)
-
+                self.level.room = self.level.past.room
+                self.level.entities = self.level.past.entities
                 World.isFuture = false
             end
         end
