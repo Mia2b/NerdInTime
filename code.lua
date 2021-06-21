@@ -77,6 +77,9 @@ Controller = {
 
 Flags = {
     solid = 0,
+    plant = 1,
+    stone = 2,
+    player = 15,
 }
 
 Player = {
@@ -345,16 +348,17 @@ TimeStone = {
             World.player.onGround = true
         end
     end,
-
+    setPosition = function(self, x, y)
+        self.position.x = x
+        self.position.y = y
+    end,
     -- TODO: add move on time switching
 }
 
-function TimeStone:new(timeStone, x, y)
-    timeStone = timeStone or {}
+function TimeStone:new(timeStone)
+    local timeStone = timeStone or {}
     setmetatable(timeStone, self)
     self.__index = self
-    timeStone.position.x = x
-    timeStone.position.y = y
     return timeStone
 end
 
@@ -435,16 +439,17 @@ PlantPot = {
             World.player.onGround = true
         end
     end,
-
+    setPosition = function(self, x, y)
+        self.position.x = x
+        self.position.y = y
+    end,
     -- TODO: add move on time switching
 }
 
-function PlantPot:new(plantPot, x, y)
-    plantPot = plantPot or {}
+function PlantPot:new(plantPot)
+    local plantPot = plantPot or {}
     setmetatable(plantPot, self)
     self.__index = self
-    plantPot.position.x = x
-    plantPot.position.y = y
     return plantPot
 end
 
@@ -455,14 +460,17 @@ Levels = {
             room = {
                 x = 0,
                 y = 0,
-            }
+            },
+            entities = {}
         },
         future = {
             room = {
                 x = 0,
                 y = 1,
-            }
+            },
+            entities = {}
         },
+        entities = {}
     }
 }
 
@@ -483,7 +491,7 @@ World = {
 
         end,
     },
-    entities = {},
+    level = nil,
     player = Player:new(nil,64,64),
     rules = {
         gravity = 0.2,
@@ -493,17 +501,17 @@ World = {
     isFuture = false,
     update = function(self)
         ScrollPosition ( self.camera.x, self.camera.y )
-        if next(self.entities) then
-            for i, entity in ipairs(self.entities) do
+        self.player:update()
+        if next(self.level.entities) then
+            for i, entity in ipairs(self.level.entities) do
                 entity:update()
             end
         end
-        self.player:update()
     end,
     draw = function(self)
         -- Draw all entities
-        if next(self.entities) then
-            for i, entity in ipairs(self.entities) do
+        if next(self.level.entities) then
+            for i, entity in ipairs(self.level.entities) do
                 DrawSprite( entity.sprite,
                             entity.position.x - self.camera.x,
                             entity.position.y - self.camera.y,
@@ -523,8 +531,30 @@ World = {
                     DrawMode.Sprite,
                     0)
     end,
+    startLevel = function(self, newLevel)
+        self.level = newLevel
+        local startX = self.level.past.room.x * 32
+        local startY = self.level.past.room.y * 32
 
-    parseRoom = function(self)
+        for scanY = startY, startY + 32, 1 do
+            for scanX = startX, startX + 32, 1 do
+                local flagScan = Flag(scanX, scanY)
+                if flagScan == Flags.plant then
+                    local ent = PlantPot:new()
+                    ent:setPosition(scanX * 8, scanY * 8)
+                    table.insert(self.level.past.entities, ent)
+                elseif flagScan == Flags.stone then
+                    local ent = TimeStone:new()
+                    ent:setPosition(scanX * 8, scanY * 8)
+                    table.insert(self.level.past.entities, ent)
+                elseif flagScan == Flags.stone then
+                    local newPlayer = Player:new(nil, scanX * 8, scanY * 8)
+                    self.player = newPlayer
+                end
+            end
+        end
+        self.level.entities = self.level.past.entities
+
     end,
 }
 
@@ -540,7 +570,8 @@ end
 function Init()
     BackgroundColor(0)
     PlaySong(0, true)
-    SpawnSprites()
+    World:startLevel(Levels.one)
+    -- SpawnSprites()
 end
 
 
@@ -563,67 +594,6 @@ function Update(timeDelta)
             end
         end
     end
-
-    -- -- Plant pot collision x
-    -- if math.abs(player.position.x + player.velocity.x - plantPot.position.x) < 8 and math.abs(player.position.y - plantPot.position.y) == 0 then
-    --     player.position.x = startx
-    --     player.velocity.x = 0
-    -- end
-
-
-
-    -- -- Plant pot collision y
-    -- if math.abs(player.position.y - plantPot.position.y) < 4 and math.abs(player.position.x - plantPot.position.x) < 8 and not plantPot.pickedUp then
-    --     player.position.y = plantPot.position.y - 4
-    --     player.velocity.y = 0
-    --     player.onGround = true
-    -- end
-
-    -- -- Pick up
-    -- if Button(Buttons.B, InputState.Down)  and not bHeldDown then
-    --     -- Plant pot
-    --     if math.abs(player.position.x + player.velocity.x - plantPot.position.x) < 10 and math.abs(player.position.y - plantPot.position.y) < 8 then
-    --         -- Put down pot
-    --         PlaySound(7, 5)
-    --         if plantPot.pickedUp then
-    --             plantPot.position.y = player.position.y
-    --         end
-    --         plantPot.pickedUp = not plantPot.pickedUp
-    --         bHeldDown = true
-    --     end
-    -- end
-
-    -- if Button(Buttons.B, InputState.Released) then
-    --     bHeldDown = false
-    -- end
-
-    -- -- Update Plant pot position
-    -- if plantPot.pickedUp then
-    --     local plantOffset = (player.isLeft and -8 or 8)
-    --     plantPot.position.x = player.position.x + plantOffset
-    --     plantPot.position.y = player.position.y - 3
-    -- end
-
-    -- -- Change time
-    -- if Button(Buttons.Up, InputState.Down) and not upHeldDown then
-    --     isFuture = not isFuture
-    --     local bgColor = (isFuture and 1 or 0)
-    --     BackgroundColor( bgColor )
-    --     upHeldDown = true
-    -- end
-
-    -- if isFuture then
-    --     camera.x = 32
-    --     camera.y = 32
-    -- else
-    --     camera.x = 0
-    --     camera.y = 0
-    -- end
-
-    -- if Button(Buttons.Up, InputState.Released) then
-    --     upHeldDown = false
-    -- end
-
 end
 
 function Draw()
@@ -631,7 +601,7 @@ function Draw()
     World:draw()
 
     -- Some debug text
-    DrawText(tostring(time), 1, 1, DrawMode.Tile, "large", 5)
+    DrawText(tostring(time), 1 + World.camera.x/8, 1 + World.camera.y/8, DrawMode.Tile, "large", 5)
     -- DrawSprite( player.sprite, player.position.x -  camera.x, player.position.y - camera.y, player.isLeft, false, DrawMode.Sprite, 0)
     -- DrawSprite( plantPot.sprite, plantPot.position.x - camera.x, plantPot.position.y - camera.y, false, false, DrawMode.Sprite, 0)
     -- DrawSprite( timeStone.sprite, timeStone.position.x - camera.x, timeStone.position.y - camera.y, false, false, DrawMode.Sprite, 0)
