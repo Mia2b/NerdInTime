@@ -459,20 +459,23 @@ WoodenSpringX = {
             end
         end
         -- collision with player
-        if ((World.player.position.x + World.player.velocity.x - self.position.x) < 8
+        if ((World.player.position.x - self.position.x) < 8
+                and (World.player.position.x - self.position.x) >= 0
                 and math.abs(World.player.position.y - self.position.y) == 0) then
             World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
-            World.player.velocity.x = World.isFuture and 0 or -2
+            World.player.velocity.x = World.isFuture and 0 or 20
         end
 
-        if ((self.position.x - World.player.position.x - World.player.velocity.x) < 8
+        if ((self.position.x - World.player.position.x ) < 8
+                and (self.position.x - World.player.position.x ) >= 0
                 and math.abs(World.player.position.y - self.position.y) == 0) then
             World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
-            World.player.velocity.x = World.isFuture and 0 or 2
+            World.player.velocity.x = World.isFuture and 0 or -20
         end
 
-        if (math.abs(World.player.position.y - self.position.y) < 4
-                and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
+        if (math.abs(World.player.position.y - self.position.y) < 8
+                and math.abs(World.player.position.x - self.position.x) < 8
+                and not self.pickedUp) then
             World.player.position.y = self.position.y - 4
             World.player.onGround = true
         end
@@ -799,16 +802,18 @@ MetalSpringX = {
             end
         end
         -- collision with player
-        if ((World.player.position.x + World.player.velocity.x - self.position.x) < 4
+        if ((World.player.position.x - self.position.x) < 8
+                and (World.player.position.x - self.position.x) >= 0
                 and math.abs(World.player.position.y - self.position.y) == 0) then
             World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
-            World.player.velocity.x = -5
+            World.player.velocity.x = 10
         end
 
-        if ((self.position.x - World.player.position.x + World.player.velocity.x ) < 4
+        if ((self.position.x - World.player.position.x ) < 8
+                and (self.position.x - World.player.position.x ) >= 0
                 and math.abs(World.player.position.y - self.position.y) == 0) then
             World.player.position.x = World.player.previousPosition.x -- TODO: startx needs to be the previous player position
-            World.player.velocity.x = 5
+            World.player.velocity.x = -10
         end
 
         if (math.abs(World.player.position.y - self.position.y) < 4
