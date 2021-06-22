@@ -130,10 +130,6 @@ Player = {
     decceleration = 0.25,
     jumpPower = 1.75,
     empty = true,
-    currentRoom = {
-        x = 0,
-        y = 0,
-    },
     previousPosition = {
         x = 0.0,
         y = 0.0,
@@ -145,20 +141,22 @@ Player = {
         self.previousPosition.y = self.position.y
         local accel = 0
         local deccel = 0
-
+        local weight = 0
+        if not self.empty then
+            weight = 0.3
+        end
         -- Change the accelaration influence based on if you are in the air or on the ground
         if not self.onGround then
-            accel = self.acceleration / 2
-            deccel = self.decceleration / 4
+            accel = (self.acceleration - (weight / 4)) / 2
+            deccel = (self.decceleration - (weight / 4)) / 4
         else
-            accel = self.acceleration
-            deccel = self.decceleration
+            accel = (self.acceleration - (weight / 4))
+            deccel = (self.decceleration - (weight / 4))
         end
-
         -- Apply jump velocity
         if Controller.A.pressed and self.onGround  then
             PlaySound(6, 6)
-            self.velocity.y = -self.jumpPower - math.abs(self.velocity.x) / 4
+            self.velocity.y = -self.jumpPower + weight - math.abs(self.velocity.x) / 4
         end
 
         -- Player movement
@@ -187,10 +185,11 @@ Player = {
         end
 
         -- Make sure the player isn't too fast in the x axis
-        if self.velocity.x > self.velocity.maxX then
-            self.velocity.x = self.velocity.maxX
-        elseif self.velocity.x < -self.velocity.maxX then
-            self.velocity.x = -self.velocity.maxX
+        local maxCheck = self.velocity.maxX - weight * 2
+        if self.velocity.x > maxCheck then
+            self.velocity.x = maxCheck
+        elseif self.velocity.x < -maxCheck then
+            self.velocity.x = -maxCheck
         end
 
         -- Change gravity based on if holding jump or not
@@ -252,8 +251,8 @@ Player = {
     end,
 
     timeTravel = function(self, newRoom)
-        local newX = self.position.x + (newRoom.x - self.currentRoom.x) * 8 * 32
-        local newY = self.position.y + (newRoom.y - self.currentRoom.y) * 8 * 32
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
 
         -- Check the player can tp
         local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
@@ -266,7 +265,6 @@ Player = {
             return false
         else
             PlaySound(9, 4)
-            self.currentRoom = newRoom
             self.position.x = newX
             self.position.y = newY
             return true
@@ -387,7 +385,7 @@ TimeStone = {
         local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
 
         if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
-            return false
+            return self.pickedUp
         else
             return true
         end
@@ -503,7 +501,7 @@ WoodenSpringX = {
     spawnFuture = function(self, newRoom)
         local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
         local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
-        local ent = GrownPlant:new()
+        local ent = Dust:new()
         ent:setPosition(newX, newY)
         table.insert(World.level.future.entities, ent)
     end,
@@ -621,7 +619,7 @@ WoodenSpringY = {
     spawnFuture = function(self, newRoom)
         local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
         local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
-        local ent = GrownPlant:new()
+        local ent = Dust:new()
         ent:setPosition(newX, newY)
         table.insert(World.level.future.entities, ent)
     end,
@@ -739,7 +737,7 @@ MetalSpringY = {
     spawnFuture = function(self, newRoom)
         local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
         local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
-        local ent = GrownPlant:new()
+        local ent = MetalSpringY:new()
         ent:setPosition(newX, newY)
         table.insert(World.level.future.entities, ent)
     end,
@@ -845,7 +843,7 @@ MetalSpringX = {
     spawnFuture = function(self, newRoom)
         local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
         local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
-        local ent = GrownPlant:new()
+        local ent = MetalSpringX:new()
         ent:setPosition(newX, newY)
         table.insert(World.level.future.entities, ent)
     end,
@@ -997,22 +995,22 @@ GrownPlant = {
 
     update = function(self, delta)
         -- Pick up pot
-        -- if (Controller.B.pressed
-        --         and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
-        --         and math.abs(World.player.position.y - self.position.y) < 8) then
-        --     PlaySound(7, 5)
-        --     if self.pickedUp then
-        --         self.position.y = World.player.position.y
-        --         self.pickedUp = false
-        --         World.player.empty = true
-        --     else
-        --         if World.player.empty then
-        --             self.position.y = World.player.position.y - 3
-        --             self.pickedUp = true
-        --             World.player.empty = false
-        --         end
-        --     end
-        -- end
+        if (Controller.B.pressed
+                and math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 10
+                and math.abs(World.player.position.y - self.position.y) < 8) then
+            PlaySound(7, 5)
+            if self.pickedUp then
+                self.position.y = World.player.position.y
+                self.pickedUp = false
+                World.player.empty = true
+            else
+                if World.player.empty then
+                    self.position.y = World.player.position.y - 3
+                    self.pickedUp = true
+                    World.player.empty = false
+                end
+            end
+        end
 
         if self.pickedUp then
             local offsetX = World.player.isLeft and -8 or 8
@@ -1054,7 +1052,7 @@ GrownPlant = {
         if (math.abs(World.player.position.y - self.position.y) < 4
                 and math.abs(World.player.position.x - self.position.x) < 8 and not self.pickedUp) then
             World.player.position.y = self.position.y - 4
-            World.player.velocity.y = -5
+            World.player.velocity.y = -3
             World.player.onGround = true
         end
     end,
@@ -1093,8 +1091,7 @@ function GrownPlant:new(grownPlant)
     return grownPlant
 end
 
-
-ExitDoor = {
+Dust = {
     position = {
         x = 0.0,
         y = 0.0
@@ -1112,7 +1109,7 @@ ExitDoor = {
         bot = 8,
         corner = 3,
     },
-    sprite = 20,
+    sprite = 39,
     pickedUp = false,
 
     update = function(self, delta)
@@ -1176,7 +1173,102 @@ ExitDoor = {
     spawnFuture = function(self, newRoom)
         local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
         local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
-        local ent = GrownPlant:new()
+        local ent = Dust:new()
+        ent:setPosition(newX, newY)
+        table.insert(World.level.future.entities, ent)
+    end,
+}
+function Dust:new(dust)
+    local dust = dust or Deepcopy(self)
+    return dust
+end
+
+
+ExitDoor = {
+    position = {
+        x = 0.0,
+        y = 0.0
+    },
+    velocity = {
+        x = 0.0,
+        y = 0.0,
+        maxX = 2,
+    },
+    hitbox = {
+        -- Assuming top left 0,0 start
+        left = 1,
+        right = 7,
+        top = 1,
+        bot = 8,
+        corner = 3,
+    },
+    sprite = 20,
+    pickedUp = false,
+
+    update = function(self, delta)
+        if self.pickedUp then
+            local offsetX = World.player.isLeft and -8 or 8
+            self.position.x = World.player.position.x + offsetX
+            self.position.y = World.player.position.y - 3
+        else
+            -- Accelerate the pot towards the ground
+            self.velocity.y = self.velocity.y + World.rules.gravity
+            self.position.y = self.position.y + self.velocity.y
+        end
+
+        -- Up collision check
+        if self.velocity.y < 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8,(self.position.y + self.hitbox.top) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8,(self.position.y + self.hitbox.top) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor((self.position.y + self.hitbox.bot) / 8) * 8 -- TODO: Make this hug the top of the head
+                self.velocity.y = 0
+            end
+        end
+
+        -- Down collision check
+        if self.velocity.y > 0 then
+            local flagL = Flag((self.position.x + self.hitbox.left ) / 8, (self.position.y + self.hitbox.bot) / 8)
+            local flagR = Flag((self.position.x + self.hitbox.right) / 8, (self.position.y + self.hitbox.bot) / 8)
+            if flagL == Flags.solid or flagR == Flags.solid then
+                self.position.y = math.floor(self.position.y / 8) * 8
+                self.velocity.y = 0
+            end
+        end
+
+        -- collision with player
+        if (math.abs(World.player.position.x + World.player.velocity.x - self.position.x) < 8
+                and math.abs(World.player.position.y - self.position.y) < 2) then
+            return
+
+            World:startLevel(Levels.win)
+            -- TODO: Go to win screen
+        end
+    end,
+    setPosition = function(self, x, y)
+        self.position.x = x
+        self.position.y = y
+    end,
+    timeTravel = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+
+        -- Check the player can tp
+        local flag1 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.top) / 8)
+        local flag2 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.top) / 8)
+        local flag3 = Flag((newX + self.hitbox.left)  / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+        local flag4 = Flag((newX + self.hitbox.right) / 8, (newY + self.hitbox.bot - self.hitbox.corner) / 8)
+
+        if flag1 == Flags.solid or flag2 == Flags.solid or flag3 == Flags.solid or flag4 == Flags.solid then
+            return false
+        else
+            return true
+        end
+    end,
+    spawnFuture = function(self, newRoom)
+        local newX = self.position.x + (newRoom.x - World.level.room.x) * 8 * 32
+        local newY = self.position.y + (newRoom.y - World.level.room.y) * 8 * 32
+        local ent = ExitDoor:new()
         ent:setPosition(newX, newY)
         table.insert(World.level.future.entities, ent)
     end,
@@ -1209,7 +1301,49 @@ Levels = {
             x = 0,
             y = 0,
         }
-    }
+    },
+    two = {
+        past = {
+            room = {
+                x = 1,
+                y = 0,
+            },
+            entities = {}
+        },
+        future = {
+            room = {
+                x = 1,
+                y = 1,
+            },
+            entities = {}
+        },
+        entities = {},
+        room = {
+            x = 0,
+            y = 0,
+        }
+    },
+    win = {
+        past = {
+            room = {
+                x = 2,
+                y = 0,
+            },
+            entities = {}
+        },
+        future = {
+            room = {
+                x = 2,
+                y = 1,
+            },
+            entities = {}
+        },
+        entities = {},
+        room = {
+            x = 0,
+            y = 0,
+        }
+    },
 }
 
 
@@ -1319,6 +1453,7 @@ World = {
         end
         self.level.entities = self.level.past.entities
         self.level.room = self.level.past.room
+        self.camera:goToRoom(self.level.room)
     end,
     timeTravel = function(self)
         if not World.isFuture then
@@ -1351,9 +1486,9 @@ World = {
 local time = 0
 
 function Init()
+    World:startLevel(Levels.two)
     BackgroundColor(0)
     PlaySong(0, true)
-    World:startLevel(Levels.one)
 end
 
 
@@ -1363,9 +1498,9 @@ function Update(timeDelta)
 
     time = time + timeDelta
 
-    if Controller.Start.pressed then
-        World:timeTravel()
-    end
+    -- if Controller.Start.pressed then
+    --     World:timeTravel()
+    -- end
 end
 
 function Draw()
@@ -1373,7 +1508,7 @@ function Draw()
     World:draw()
 
     -- Some debug text
-    DrawText(tostring(time), 1 + World.camera.x/8, 1 + World.camera.y/8, DrawMode.Tile, "large", 5)
+    -- DrawText(tostring(World.player.position.x), 1 + World.camera.x/8, 1 + World.camera.y/8, DrawMode.Tile, "large", 5)
     -- DrawSprite( player.sprite, player.position.x -  camera.x, player.position.y - camera.y, player.isLeft, false, DrawMode.Sprite, 0)
     -- DrawSprite( plantPot.sprite, plantPot.position.x - camera.x, plantPot.position.y - camera.y, false, false, DrawMode.Sprite, 0)
     -- DrawSprite( timeStone.sprite, timeStone.position.x - camera.x, timeStone.position.y - camera.y, false, false, DrawMode.Sprite, 0)
